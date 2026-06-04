@@ -97,7 +97,7 @@ def unzip_raw(fr, unzip_dir):
 
         out_filedir = unzip_dirs[i]
         if unzip_dirs[i] in need_subdir:
-            subdir = filepath.split("/")[-1][:-4]
+            subdir = Path(filepath).stem
             out_filedir = join(out_filedir, subdir)
 
         with ZipFile(path, "r") as zip_ref:

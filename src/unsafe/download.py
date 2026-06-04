@@ -6,6 +6,7 @@ import yaml
 from yaml.loader import SafeLoader
 import requests
 import json
+from zipfile import ZipFile
 import unsafe.files as unfile
 import unsafe.const as unconst 
 
@@ -83,11 +84,34 @@ def process_file(file):
     return str_tokens, endpoint
 
 # The download_url helper function
-def download_url(url, save_path, chunk_size=128):
-    r = requests.get(url, stream=True)
-    with open(save_path, "wb") as fd:
-        for chunk in r.iter_content(chunk_size=chunk_size):
-            fd.write(chunk)
+def download_url(url, save_path, chunk_size=1024*1024, retries=5):
+    headers = {"Accept-Encoding": "identity"}
+    for attempt in range(1, retries + 1):
+        try:
+            r = requests.get(url, headers=headers, stream=True)
+            content_length = r.headers.get('Content-Length')
+            with open(save_path, "wb") as fd:
+                for chunk in r.iter_content(chunk_size=chunk_size):
+                    fd.write(chunk)
+            
+            if content_length is not None:
+                expected_size = int(content_length)
+                actual_size = os.path.getsize(save_path)
+                if actual_size < expected_size:
+                    raise IOError(f"Truncated download: got {actual_size} bytes, expected {expected_size}")
+            
+            # Verify if it's a valid zip if it has .zip extension
+            if save_path.endswith(".zip"):
+                with ZipFile(save_path, "r") as zf:
+                    if zf.testzip() is not None:
+                        raise IOError("Downloaded zip file is corrupt (testzip failed)")
+            
+            # If we reached here, download is successful and complete
+            return
+        except Exception as e:
+            print(f"Attempt {attempt}/{retries} failed for {url}: {e}")
+            if attempt == retries:
+                raise
 
 
 # The download_api helper function
@@ -97,7 +121,8 @@ def download_url(url, save_path, chunk_size=128):
 # so want to split this from the download_url
 # function
 def download_api(url, save_path):
-    data = requests.get(url).json()
+    headers = {"Accept-Encoding": "identity"}
+    data = requests.get(url, headers=headers).json()
     with open(save_path, "w") as fd:
         json.dump(data, fd)
 
@@ -122,6 +147,21 @@ def download_raw(files, wcard_dict, fr, api_ext):
 
         # Make sure we can write out data to this filepath
         unfile.prepare_saving(out_filepath)
+
+        # Check if file is already downloaded and non-empty
+        if os.path.exists(out_filepath) and os.path.getsize(out_filepath) > 0:
+            if out_filepath.endswith(".zip"):
+                try:
+                    with ZipFile(out_filepath, "r") as zf:
+                        if zf.testzip() is None:
+                            print("Already downloaded (valid zip): " + str(endpoint))
+                            continue
+                except Exception:
+                    print("Corrupt/incomplete zip detected, re-downloading: " + str(endpoint))
+                    pass
+            else:
+                print("Already downloaded: " + str(endpoint))
+                continue
 
         # Download data with api or url call
         if str_tokens[1] == "api":
