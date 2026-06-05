@@ -37,7 +37,7 @@ download:
         # These URLs currently are not in a structured format so I manually input this
         # after searching on the FEMA map services center
         pol:
-          nfhl: "https://www.pasda.psu.edu/download/philacity/data/Philadelphia_NFHL_42_2023.zip"
+          nfhl: "https://msc.fema.gov/portal/downloadProduct?productTypeID=NFHL&productSubTypeID=NFHL_STATE_DATA&productID=NFHL_48_20260528"
         
   STATEABBR:
     url:
