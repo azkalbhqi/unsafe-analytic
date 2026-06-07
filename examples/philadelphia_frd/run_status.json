@@ -1,0 +1,18 @@
+{
+  "status": "failed",
+  "progress": 100,
+  "stage": "Error",
+  "logs": [
+    "Task queued in background worker.",
+    "Starting pipeline execution...",
+    "Workspace directory set to: d:\\Kuliahhh\\SEMSTER 6\\GIS\\unsafe\\examples\\philadelphia_frd",
+    "Skipping download of raw data.",
+    "Skipping unzipping raw data.",
+    "Preparing exposure GeoDataFrame...",
+    "Saved exposure subset to: d:\\Kuliahhh\\SEMSTER 6\\GIS\\unsafe\\examples\\philadelphia_frd\\data\\interim\\exp\\42101\\nsi_sf.gpkg",
+    "Preparing geographic reference boundaries...",
+    "Pipeline execution failed: d:\\Kuliahhh\\SEMSTER 6\\GIS\\unsafe\\examples\\philadelphia_frd\\data\\raw\\unzipped\\ref/P/tract/tl_2022_42_tract.shp: No such file or directory"
+  ],
+  "error": "Traceback (most recent call last):\n  File \"fiona\\\\ogrext.pyx\", line 136, in fiona.ogrext.gdal_open_vector\n  File \"fiona\\\\_err.pyx\", line 291, in fiona._err.exc_wrap_pointer\nfiona._err.CPLE_OpenFailedError: d:\\Kuliahhh\\SEMSTER 6\\GIS\\unsafe\\examples\\philadelphia_frd\\data\\raw\\unzipped\\ref/P/tract/tl_2022_42_tract.shp: No such file or directory\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\Kuliahhh\\SEMSTER 6\\GIS\\unsafe-be\\app\\pipeline.py\", line 245, in run_unsafe_pipeline\n    unexp.clip_ref_files(clip_gdf, FIPS, fips_args, ref_downloads, wcard_dict, REF_DIR_UZ, REF_DIR_I)\n  File \"D:\\Kuliahhh\\SEMSTER 6\\GIS\\unsafe\\src\\unsafe\\exp.py\", line 139, in clip_ref_files\n    ref_shp = gpd.read_file(ref_filep)\n  File \"C:\\Users\\azkal\\miniforge3\\envs\\unsafe_env\\lib\\site-packages\\geopandas\\io\\file.py\", line 297, in _read_file\n    return _read_file_fiona(\n  File \"C:\\Users\\azkal\\miniforge3\\envs\\unsafe_env\\lib\\site-packages\\geopandas\\io\\file.py\", line 338, in _read_file_fiona\n    with reader(path_or_bytes, **kwargs) as features:\n  File \"C:\\Users\\azkal\\miniforge3\\envs\\unsafe_env\\lib\\site-packages\\fiona\\env.py\", line 457, in wrapper\n    return f(*args, **kwds)\n  File \"C:\\Users\\azkal\\miniforge3\\envs\\unsafe_env\\lib\\site-packages\\fiona\\__init__.py\", line 292, in open\n    colxn = Collection(\n  File \"C:\\Users\\azkal\\miniforge3\\envs\\unsafe_env\\lib\\site-packages\\fiona\\collection.py\", line 243, in __init__\n    self.session.start(self, **kwargs)\n  File \"fiona\\\\ogrext.pyx\", line 588, in fiona.ogrext.Session.start\n  File \"fiona\\\\ogrext.pyx\", line 143, in fiona.ogrext.gdal_open_vector\nfiona.errors.DriverError: d:\\Kuliahhh\\SEMSTER 6\\GIS\\unsafe\\examples\\philadelphia_frd\\data\\raw\\unzipped\\ref/P/tract/tl_2022_42_tract.shp: No such file or directory\n",
+  "result_summary": {}
+}
