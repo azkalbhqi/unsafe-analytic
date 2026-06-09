@@ -1,6 +1,9 @@
 # Folders to ignore
 #  In general, we don't want the data directory
 examples/philadelphia_frd/data/*
+examples/houston/data/*
+examples/Houston/data/*
+
 # But we will want data for a small reproducible test case
 # That entails the DDFs and the clipped depth grid
 # I got help from this tool

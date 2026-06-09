@@ -37,7 +37,7 @@ download:
         # These URLs currently are not in a structured format so I manually input this
         # after searching on the FEMA map services center
         pol:
-          nfhl: "https://www.pasda.psu.edu/download/philacity/data/Philadelphia_NFHL_42_2023.zip"
+          nfhl: "null"
         
   STATEABBR:
     url:
@@ -90,7 +90,7 @@ nsi_crs: "EPSG:4326"
 # - Prime Meridian: Greenwich
 # This corresponds to EPSG: 3725
 # (https://epsg.io/3725)
-haz_crs: "EPSG:3725"
+haz_crs: "EPSG:2278"
 
 # Dictionary of reference filenames to 
 # what we want them to say

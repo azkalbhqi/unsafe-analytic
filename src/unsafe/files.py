@@ -86,8 +86,9 @@ def fill_wcard(wcard_str, wcard_dict):
         return wcard_str
 
     # Replace the wildcard with the value stored in a wildcard dictionary
+    replaced_str = wcard_str
     for wildcard in wildcards:
-        replaced_str = wcard_str.replace(wildcard, wcard_dict[wildcard])
+        replaced_str = replaced_str.replace(wildcard, wcard_dict[wildcard])
 
     return replaced_str
 

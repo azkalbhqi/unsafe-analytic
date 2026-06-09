@@ -100,6 +100,11 @@ def unzip_raw(fr, unzip_dir):
             subdir = Path(filepath).stem
             out_filedir = join(out_filedir, subdir)
 
+        import os
+        if os.path.exists(out_filedir) and os.listdir(out_filedir):
+            print("Already unzipped: " + str(path.name).split(".")[0])
+            continue
+
         with ZipFile(path, "r") as zip_ref:
             zip_ref.extractall(out_filedir)
 

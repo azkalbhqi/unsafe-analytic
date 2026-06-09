@@ -229,11 +229,37 @@ def process_national_sovi(sovi_list, fips, vuln_dir_r, ref_dir_i, vuln_dir_i):
 
 def process_nfhl(fips, unzip_dir, pol_dir_i, filename):
     """
-    Process the raw NFHL data and write it out
+    Process the raw NFHL data and write it out.
+    Supports reading from both shapefiles and geodatabases.
     """
-    # We want S_FLD_HAZ_AR
-    fld_haz_fp = join(unzip_dir, fips, filename)
-    nfhl = gpd.read_file(fld_haz_fp)
+    import glob
+    from pathlib import Path
+    
+    # Check if a geodatabase (.gdb) exists in the directory
+    gdb_paths = glob.glob(join(unzip_dir, fips, "*.gdb"))
+    
+    if gdb_paths:
+        gdb_path = gdb_paths[0]
+        print(f"Reading layer S_FLD_HAZ_AR from Geodatabase: {gdb_path}")
+        
+        # Optimize load using county boundary mask if available
+        interim_dir = Path(pol_dir_i).parents[0]
+        county_gpkg = join(interim_dir, "ref", fips, "county.gpkg")
+        
+        if os.path.exists(county_gpkg):
+            print(f"Loading county boundary mask to optimize GDB read from: {county_gpkg}")
+            county = gpd.read_file(county_gpkg)
+            # Read 1 row first to get the target CRS
+            gdb_sample = gpd.read_file(gdb_path, layer="S_FLD_HAZ_AR", rows=1)
+            county_reproj = county.to_crs(gdb_sample.crs)
+            nfhl = gpd.read_file(gdb_path, layer="S_FLD_HAZ_AR", mask=county_reproj)
+        else:
+            nfhl = gpd.read_file(gdb_path, layer="S_FLD_HAZ_AR")
+    else:
+        # We want S_FLD_HAZ_AR shapefile
+        fld_haz_fp = join(unzip_dir, fips, filename)
+        print(f"Reading shapefile: {fld_haz_fp}")
+        nfhl = gpd.read_file(fld_haz_fp)
 
     # Keep FLD_ZONE, FLD_AR_ID, STATIC_BFE, geometry
     keep_cols = ["FLD_ZONE", "FLD_AR_ID", "STATIC_BFE", "ZONE_SUBTY", "geometry"]
@@ -254,7 +280,9 @@ def process_nfhl(fips, unzip_dir, pol_dir_i, filename):
     # Write file
     nfhl_out_filep = join(pol_dir_i, fips, "fld_zones.gpkg")
     unfile.prepare_saving(nfhl_out_filep)
-    nfhl_f.to_file(nfhl_out_filep, driver="GPKG")
+    if os.path.exists(nfhl_out_filep):
+        os.remove(nfhl_out_filep)
+    nfhl_f.to_file(nfhl_out_filep, driver="GPKG", mode="w")
     # TODO better logging
     print("Wrote NFHL for county")
 

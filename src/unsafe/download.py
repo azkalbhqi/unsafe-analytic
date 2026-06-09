@@ -7,6 +7,8 @@ from yaml.loader import SafeLoader
 import requests
 import json
 from zipfile import ZipFile
+import sys
+import time
 import unsafe.files as unfile
 import unsafe.const as unconst 
 
@@ -88,17 +90,31 @@ def download_url(url, save_path, chunk_size=1024*1024, retries=5):
     headers = {"Accept-Encoding": "identity"}
     for attempt in range(1, retries + 1):
         try:
-            r = requests.get(url, headers=headers, stream=True)
+            print(f"Downloading (attempt {attempt}/{retries}): {url}")
+            r = requests.get(url, headers=headers, stream=True, timeout=(15, 60))
+            r.raise_for_status()
             content_length = r.headers.get('Content-Length')
+            total_bytes = int(content_length) if content_length is not None else None
+            
+            downloaded = 0
             with open(save_path, "wb") as fd:
                 for chunk in r.iter_content(chunk_size=chunk_size):
+                    if not chunk:
+                        continue
                     fd.write(chunk)
+                    downloaded += len(chunk)
+                    if total_bytes:
+                        percent = (downloaded / total_bytes) * 100
+                        sys.stdout.write(f"\r  Progress: {downloaded / (1024*1024):.2f} MB / {total_bytes / (1024*1024):.2f} MB ({percent:.1f}%)")
+                    else:
+                        sys.stdout.write(f"\r  Progress: {downloaded / (1024*1024):.2f} MB")
+                    sys.stdout.flush()
+            print() # Move to next line after loop
             
-            if content_length is not None:
-                expected_size = int(content_length)
+            if total_bytes is not None:
                 actual_size = os.path.getsize(save_path)
-                if actual_size < expected_size:
-                    raise IOError(f"Truncated download: got {actual_size} bytes, expected {expected_size}")
+                if actual_size < total_bytes:
+                    raise IOError(f"Truncated download: got {actual_size} bytes, expected {total_bytes}")
             
             # Verify if it's a valid zip if it has .zip extension
             if save_path.endswith(".zip"):
@@ -109,9 +125,10 @@ def download_url(url, save_path, chunk_size=1024*1024, retries=5):
             # If we reached here, download is successful and complete
             return
         except Exception as e:
-            print(f"Attempt {attempt}/{retries} failed for {url}: {e}")
+            print(f"\nAttempt {attempt}/{retries} failed for {url}: {e}")
             if attempt == retries:
                 raise
+            time.sleep(2 ** attempt) # Exponential backoff
 
 
 # The download_api helper function
@@ -120,11 +137,63 @@ def download_url(url, save_path, chunk_size=1024*1024, retries=5):
 # downloading from different apis
 # so want to split this from the download_url
 # function
-def download_api(url, save_path):
+def download_api(url, save_path, chunk_size=1024*1024, retries=5):
     headers = {"Accept-Encoding": "identity"}
-    data = requests.get(url, headers=headers).json()
-    with open(save_path, "w") as fd:
-        json.dump(data, fd)
+    for attempt in range(1, retries + 1):
+        try:
+            print(f"Downloading API data (attempt {attempt}/{retries}): {url}")
+            r = requests.get(url, headers=headers, stream=True, timeout=(15, 60))
+            r.raise_for_status()
+            content_length = r.headers.get('Content-Length')
+            total_bytes = int(content_length) if content_length is not None else None
+            
+            downloaded = 0
+            with open(save_path, "wb") as fd:
+                for chunk in r.iter_content(chunk_size=chunk_size):
+                    if not chunk:
+                        continue
+                    fd.write(chunk)
+                    downloaded += len(chunk)
+                    if total_bytes:
+                        percent = (downloaded / total_bytes) * 100
+                        sys.stdout.write(f"\r  Progress: {downloaded / (1024*1024):.2f} MB / {total_bytes / (1024*1024):.2f} MB ({percent:.1f}%)")
+                    else:
+                        sys.stdout.write(f"\r  Progress: {downloaded / (1024*1024):.2f} MB")
+                    sys.stdout.flush()
+            print() # Move to next line after loop
+            
+            if total_bytes is not None:
+                actual_size = os.path.getsize(save_path)
+                if actual_size < total_bytes:
+                    raise IOError(f"Truncated download: got {actual_size} bytes, expected {total_bytes}")
+            
+            # Verify if it's a valid JSON by trying to read start/end chars
+            with open(save_path, "r", encoding="utf-8") as fd:
+                fd.seek(0, 2)
+                file_size = fd.tell()
+                if file_size == 0:
+                    raise IOError("Downloaded JSON file is empty")
+                
+                # Read first char
+                fd.seek(0)
+                first_char = fd.read(1).strip()
+                while not first_char and fd.tell() < file_size:
+                    first_char = fd.read(1).strip()
+                
+                # Read last char
+                fd.seek(max(0, file_size - 100))
+                last_chars = fd.read().strip()
+                
+                if first_char not in ('{', '[') or (last_chars and last_chars[-1] not in ('}', ']')):
+                    raise IOError("Downloaded JSON file is corrupt/incomplete (invalid start/end characters)")
+            
+            # If we reached here, download is successful and complete
+            return
+        except Exception as e:
+            print(f"\nAttempt {attempt}/{retries} failed for {url}: {e}")
+            if attempt == retries:
+                raise
+            time.sleep(2 ** attempt) # Exponential backoff
 
 
 # The download_raw function
@@ -138,6 +207,12 @@ def download_raw(files, wcard_dict, fr, api_ext):
     for file in files.itertuples():
         # Get the str_tokens and endpoint from the dataframe row
         str_tokens, endpoint = process_file(file)
+        
+        # Check if the endpoint is a placeholder (like "null" or empty)
+        if not endpoint or endpoint.lower() in ("null", "none"):
+            print(f"Skipping placeholder endpoint: {'_'.join(str_tokens)}")
+            continue
+
         # Get the out filepath
         # "Clean" it with the wcard_dict
         out_filepath = get_dir(str_tokens, endpoint, fr, api_ext)
